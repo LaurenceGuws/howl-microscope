@@ -1,0 +1,19 @@
+id = "smoke.input.placeholder"
+kind = "input_probe"
+title = "Basic input probe placeholder"
+tags = ["smoke", "input"]
+
+[setup]
+reset = false
+alt_screen = false
+raw_mode = true
+
+[[steps]]
+write = "\u001b[?1000h"
+
+[[expect]]
+type = "manual_note"
+prompt = "Input tracking placeholder only (no PTY in phase-1)"
+
+[report]
+severity = "core"

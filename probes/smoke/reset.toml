@@ -1,0 +1,19 @@
+id = "smoke.reset"
+kind = "vt_sequence"
+title = "Terminal reset smoke (placeholder)"
+tags = ["smoke", "reset"]
+
+[setup]
+reset = true
+alt_screen = false
+raw_mode = false
+
+[[steps]]
+write = "\u001bc"
+
+[[expect]]
+type = "manual_note"
+prompt = "Reset sequence sent (phase-1 manual check)"
+
+[report]
+severity = "core"

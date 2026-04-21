@@ -1,0 +1,22 @@
+id = "smoke.alt_screen"
+kind = "vt_sequence"
+title = "Alternate screen enter/exit (placeholder)"
+tags = ["smoke", "alt"]
+
+[setup]
+reset = false
+alt_screen = true
+raw_mode = false
+
+[[steps]]
+write = "\u001b[?1049h"
+
+[[steps]]
+write = "\u001b[?1049l"
+
+[[expect]]
+type = "manual_note"
+prompt = "Alt-screen toggle bytes sent (phase-1 manual check)"
+
+[report]
+severity = "core"

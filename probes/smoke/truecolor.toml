@@ -1,0 +1,19 @@
+id = "smoke.truecolor"
+kind = "vt_sequence"
+title = "Truecolor SGR smoke (placeholder)"
+tags = ["smoke", "color"]
+
+[setup]
+reset = true
+alt_screen = false
+raw_mode = false
+
+[[steps]]
+write = "\u001b[38;2;255;128;64mcolor\u001b[0m"
+
+[[expect]]
+type = "manual_note"
+prompt = "Truecolor SGR bytes sent (phase-1 manual check)"
+
+[report]
+severity = "core"

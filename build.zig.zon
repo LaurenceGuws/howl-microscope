@@ -1,0 +1,14 @@
+.{
+    .name = .howl_microscope,
+    .version = "0.0.0",
+    .fingerprint = 0x4fd102cffb431f97,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+        "LICENSE",
+    },
+}

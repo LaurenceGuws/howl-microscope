@@ -1,0 +1,22 @@
+id = "smoke.cursor.baseline"
+kind = "vt_sequence"
+title = "Cursor move baseline (placeholder)"
+tags = ["smoke", "cursor"]
+
+[setup]
+reset = false
+alt_screen = false
+raw_mode = false
+
+[[steps]]
+write = "\u001b[H"
+
+[[steps]]
+write = "\u001b[2B"
+
+[[expect]]
+type = "manual_note"
+prompt = "Cursor positioning bytes sent (phase-1 manual check)"
+
+[report]
+severity = "core"

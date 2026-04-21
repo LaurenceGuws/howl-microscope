@@ -1,0 +1,6 @@
+# PH1-M2 baseline-linux suite — one .toml path per line (repo-relative)
+probes/smoke/reset.toml
+probes/smoke/cursor.toml
+probes/smoke/alt_screen.toml
+probes/smoke/truecolor.toml
+probes/smoke/input_placeholder.toml
