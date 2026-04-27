@@ -4,7 +4,7 @@
 
 ## Scope
 
-**Phase 1 (current milestone)** builds scaffolding for test definition, execution, capture, and reporting: repo layout, DSL and report contracts, a Zig CLI entrypoint, spec discovery/loading/validation, run/capture/report seams, seed probes, and placeholder artifact emission.
+**Phase 1 (current milestone)** builds scaffolding for test definition, execution, capture, and reporting: repo layout, DSL and report contracts, a Zig CLI entrypoint, spec discovery/loading/validation, run/capture/report boundaries, seed probes, and placeholder artifact emission.
 
 **Phase 1 non-goals** (aligned with `docs/Vision.md`): no rich TUI frontend, no screenshot or OCR-based workflows, and no deep automation against every terminal or platform yet.
 

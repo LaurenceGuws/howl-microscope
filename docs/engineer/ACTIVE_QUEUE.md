@@ -16,7 +16,7 @@ Test framework and validation harness for session/terminal integration testing.
 
 - Pattern gate policy finalized: Exclude semantic `source_fallback` terminal profile type
 - Validation command: `rg -n "compat[^ib]|workaround|shim" --glob '*.zig' src` (fallback excluded)
-- Rationale: `source_fallback` is domain enum-like value, not code workaround pattern
+- Rationale: `source_fallback` is domain enum-like value, not code workaround rule
 
 ### Known Intentional Limits
 
@@ -36,4 +36,4 @@ Test framework and validation harness for session/terminal integration testing.
 - Mandatory validation per ticket:
   - `zig build`
   - `zig build test`
-  - No forbidden patterns
+  - No forbidden rules
