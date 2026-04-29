@@ -20,7 +20,7 @@ const argv_ghostty = [_][]const u8{"ghostty"};
 const argv_konsole = [_][]const u8{"konsole"};
 const argv_zide = [_][]const u8{"zide-terminal"};
 
-/// Built-in profile + executable template contract (PH1-M34).
+/// Built-in profile + executable template api (PH1-M34).
 pub const ProfileExecSpec = struct {
     profile_id: []const u8,
     template_id: []const u8,

@@ -4,7 +4,7 @@ const launch_preflight = @import("../runner/launch_preflight.zig");
 const real_terminal_launch = @import("../runner/real_terminal_launch.zig");
 const launch_diagnostics_canonical = @import("../runner/launch_diagnostics_canonical.zig");
 
-/// Returns `null` if `root` satisfies the phase-1 `run.json` contract (`docs/REPORT_FORMAT.md` + harness output); otherwise a static error description.
+/// Returns `null` if `root` satisfies the phase-1 `run.json` api (`docs/REPORT_FORMAT.md` + harness output); otherwise a static error description.
 pub fn validateRunReport(root: std.json.Value) ?[]const u8 {
     const obj = switch (root) {
         .object => |o| o,
@@ -1278,4 +1278,3 @@ test "validateRunReport accepts terminal_launch_outcome timeout" {
     defer parsed.deinit();
     try std.testing.expect(validateRunReport(parsed.value) == null);
 }
-
