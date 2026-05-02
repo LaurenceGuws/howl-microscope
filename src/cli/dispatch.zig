@@ -11,32 +11,23 @@ fn printListStub(allocator: std.mem.Allocator, roots: []const []const u8) !void 
     const paths = try discovery.discover(allocator, roots);
     defer discovery.freePaths(allocator, paths);
 
-    var buf: [4096]u8 = undefined;
-    var w = std.fs.File.stdout().writer(&buf);
-    try w.interface.print("# probe kinds: ", .{});
+    std.debug.print("# probe kinds: ", .{});
     for (categories.all, 0..) |c, i| {
-        if (i > 0) try w.interface.print(", ", .{});
-        try w.interface.print("{s}", .{c});
+        if (i > 0) std.debug.print(", ", .{});
+        std.debug.print("{s}", .{c});
     }
-    try w.interface.print("\n", .{});
+    std.debug.print("\n", .{});
     for (paths) |p| {
-        try w.interface.print("{s}\n", .{p});
+        std.debug.print("{s}\n", .{p});
     }
-    try w.interface.flush();
 }
 
 fn printStdout(comptime fmt: []const u8, args: anytype) !void {
-    var buf: [4096]u8 = undefined;
-    var w = std.fs.File.stdout().writer(&buf);
-    try w.interface.print(fmt, args);
-    try w.interface.flush();
+    std.debug.print(fmt, args);
 }
 
 fn printStderr(comptime fmt: []const u8, args: anytype) !void {
-    var buf: [4096]u8 = undefined;
-    var w = std.fs.File.stderr().writer(&buf);
-    try w.interface.print(fmt, args);
-    try w.interface.flush();
+    std.debug.print(fmt, args);
 }
 
 pub fn run(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
@@ -74,9 +65,7 @@ pub fn run(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
 }
 
 fn usageStderr() !void {
-    var buf: [1024]u8 = undefined;
-    var w = std.fs.File.stderr().writer(&buf);
-    try w.interface.print(
+    std.debug.print(
         \\usage: howl-microscope <command> [args...]
         \\
         \\commands:
@@ -88,5 +77,4 @@ fn usageStderr() !void {
         \\  doctor      Environment diagnostics
         \\
     , .{});
-    try w.interface.flush();
 }

@@ -2,10 +2,15 @@
 //! No interactive I/O. See `docs/PTY_EXPERIMENT_PLAN.md`.
 
 const std = @import("std");
+const c = @cImport({
+    @cInclude("unistd.h");
+    @cInclude("fcntl.h");
+    @cInclude("sys/utsname.h");
+});
 
-extern "c" fn grantpt(fd: std.posix.fd_t) i32;
-extern "c" fn unlockpt(fd: std.posix.fd_t) i32;
-extern "c" fn ptsname_r(fd: std.posix.fd_t, buf: [*]u8, buflen: usize) i32;
+extern "c" fn grantpt(fd: c_int) c_int;
+extern "c" fn unlockpt(fd: c_int) c_int;
+extern "c" fn ptsname_r(fd: c_int, buf: [*]u8, buflen: usize) c_int;
 
 pub const OpenError = error{
     UnsupportedHost,
@@ -17,19 +22,20 @@ pub const OpenError = error{
 };
 
 pub const PtyPair = struct {
-    master: std.posix.fd_t,
-    slave: std.posix.fd_t,
+    master: c_int,
+    slave: c_int,
 
     pub fn deinit(self: *PtyPair) void {
-        std.posix.close(self.slave);
-        std.posix.close(self.master);
+        _ = c.close(self.slave);
+        _ = c.close(self.master);
         self.* = undefined;
     }
 };
 
 /// Uses `uname` so behavior matches host OS (not only compile target metadata).
 pub fn runtimeHostIsLinux() bool {
-    const u = std.posix.uname();
+    var u: c.struct_utsname = undefined;
+    if (c.uname(&u) != 0) return false;
     const sys = std.mem.sliceTo(&u.sysname, 0);
     return std.mem.eql(u8, sys, "Linux");
 }
@@ -48,8 +54,9 @@ pub fn openErrorTag(err: OpenError) []const u8 {
 pub fn openMinimal() OpenError!PtyPair {
     if (!runtimeHostIsLinux()) return error.UnsupportedHost;
 
-    const master = std.posix.openZ("/dev/ptmx", .{ .ACCMODE = .RDWR }, 0) catch return error.OpenPtmx;
-    errdefer std.posix.close(master);
+    const master = c.open("/dev/ptmx", c.O_RDWR, @as(c_int, 0));
+    if (master < 0) return error.OpenPtmx;
+    errdefer _ = c.close(master);
 
     if (grantpt(master) != 0) return error.GrantPt;
     if (unlockpt(master) != 0) return error.UnlockPt;
@@ -58,7 +65,12 @@ pub fn openMinimal() OpenError!PtyPair {
     if (ptsname_r(master, &buf, buf.len) != 0) return error.PtsName;
     const slave_path = std.mem.sliceTo(&buf, 0);
 
-    const slave = std.posix.open(slave_path, .{ .ACCMODE = .RDWR }, 0) catch return error.OpenSlave;
+    var path_buf: [4096]u8 = undefined;
+    if (slave_path.len + 1 > path_buf.len) return error.OpenSlave;
+    @memcpy(path_buf[0..slave_path.len], slave_path);
+    path_buf[slave_path.len] = 0;
+    const slave = c.open(&path_buf, c.O_RDWR, @as(c_int, 0));
+    if (slave < 0) return error.OpenSlave;
 
     return .{
         .master = master,

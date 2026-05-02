@@ -1,8 +1,8 @@
 const std = @import("std");
 
 /// Collects argv after the executable name (owned by `allocator`).
-pub fn argvRest(allocator: std.mem.Allocator) ![][]const u8 {
-    var it = try std.process.argsWithAllocator(allocator);
+pub fn argvRest(allocator: std.mem.Allocator, args: std.process.Args) ![][]const u8 {
+    var it = try std.process.Args.Iterator.initAllocator(args, allocator);
     defer it.deinit();
     _ = it.next() orelse return &[_][]const u8{};
 

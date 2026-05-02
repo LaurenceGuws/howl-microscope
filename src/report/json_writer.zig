@@ -1,4 +1,5 @@
 const std = @import("std");
+const compat_io = @import("../compat_io.zig");
 const run_execute = @import("../runner/run_execute.zig");
 const RunContext = @import("../cli/run_context.zig").RunContext;
 const terminal_profile = @import("../runner/terminal_profile.zig");
@@ -26,7 +27,7 @@ const lineage_envelope_fingerprint = @import("lineage_envelope_fingerprint.zig")
 const state_envelope_fingerprint = @import("state_envelope_fingerprint.zig");
 
 fn appendJsonEncodedString(allocator: std.mem.Allocator, buf: *std.ArrayList(u8), bytes: []const u8) !void {
-    var enc: std.io.Writer.Allocating = .init(allocator);
+    var enc: std.Io.Writer.Allocating = .init(allocator);
     defer enc.deinit();
     try std.json.Stringify.encodeJsonString(bytes, .{}, &enc.writer);
     try buf.appendSlice(allocator, enc.written());
@@ -42,7 +43,7 @@ pub fn writePlaceholder(allocator: std.mem.Allocator, run_dir: []const u8, run_i
     try resultset_fingerprint.populate(&ctx, allocator, &.{});
     try transport_fingerprint.populate(&ctx, allocator, run_id);
     try exec_summary_fingerprint.populate(&ctx, allocator);
-    const term_ph = std.posix.getenv("TERM") orelse "";
+    const term_ph = compat_io.getenv("TERM");
     try context_summary_fingerprint.populate(&ctx, allocator, term_ph);
     try metadata_envelope_fingerprint.populate(&ctx, allocator);
     try artifact_bundle_fingerprint.populate(&ctx, allocator);
@@ -72,7 +73,7 @@ pub fn writeRun(
     const path = try std.fmt.allocPrint(allocator, "{s}/run.json", .{run_dir});
     defer allocator.free(path);
 
-    const term = std.posix.getenv("TERM") orelse "";
+    const term = compat_io.getenv("TERM");
 
     var buf: std.ArrayList(u8) = .empty;
     defer buf.deinit(allocator);
@@ -172,13 +173,13 @@ pub fn writeRun(
     }
     try buf.appendSlice(allocator, ",\n  \"terminal_launch_diagnostics_elapsed_ms\": ");
     if (ctx.terminal_launch_diagnostics_elapsed_ms) |ms| {
-        try buf.writer(allocator).print("{d}", .{ms});
+        try buf.print(allocator, "{d}", .{ms});
     } else {
         try buf.appendSlice(allocator, "null");
     }
     try buf.appendSlice(allocator, ",\n  \"terminal_launch_diagnostics_signal\": ");
     if (ctx.terminal_launch_diagnostics_signal) |sig| {
-        try buf.writer(allocator).print("{d}", .{sig});
+        try buf.print(allocator, "{d}", .{sig});
     } else {
         try buf.appendSlice(allocator, "null");
     }
@@ -313,7 +314,7 @@ pub fn writeRun(
         if (pty_host_null) {
             try buf.appendSlice(allocator, "null");
         } else {
-            var enc: std.io.Writer.Allocating = .init(allocator);
+            var enc: std.Io.Writer.Allocating = .init(allocator);
             defer enc.deinit();
             try std.json.Stringify.encodeJsonString(
                 ctx.pty_experiment_host_machine[0..ctx.pty_experiment_host_machine_len],
@@ -326,7 +327,7 @@ pub fn writeRun(
         if (pty_host_null) {
             try buf.appendSlice(allocator, "null");
         } else {
-            var enc2: std.io.Writer.Allocating = .init(allocator);
+            var enc2: std.Io.Writer.Allocating = .init(allocator);
             defer enc2.deinit();
             try std.json.Stringify.encodeJsonString(
                 ctx.pty_experiment_host_release[0..ctx.pty_experiment_host_release_len],
@@ -392,7 +393,7 @@ pub fn writeRun(
     }
     try buf.appendSlice(allocator, "\n  ]\n}\n");
 
-    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = buf.items });
+    try compat_io.writeFile(.{ .sub_path = path, .data = buf.items });
 }
 
 test "writeRun JSON-encodes guarded PTY host snapshot strings" {
@@ -421,7 +422,7 @@ test "writeRun JSON-encodes guarded PTY host snapshot strings" {
     try resultset_fingerprint.populate(&ctx, std.testing.allocator, &.{});
     try transport_fingerprint.populate(&ctx, std.testing.allocator, "rid-json-writer");
     try exec_summary_fingerprint.populate(&ctx, std.testing.allocator);
-    const term_w = std.posix.getenv("TERM") orelse "";
+    const term_w = compat_io.getenv("TERM");
     try context_summary_fingerprint.populate(&ctx, std.testing.allocator, term_w);
     try metadata_envelope_fingerprint.populate(&ctx, std.testing.allocator);
     try artifact_bundle_fingerprint.populate(&ctx, std.testing.allocator);
@@ -449,7 +450,7 @@ test "writeRun JSON-encodes guarded PTY host snapshot strings" {
 
     const json_path = try std.fmt.allocPrint(std.testing.allocator, "{s}/run.json", .{run_dir});
     defer std.testing.allocator.free(json_path);
-    const json_text = try std.fs.cwd().readFileAlloc(std.testing.allocator, json_path, 1 << 20);
+    const json_text = try compat_io.readFileAlloc(std.testing.allocator, json_path, 1 << 20);
     defer std.testing.allocator.free(json_text);
 
     try std.testing.expect(std.mem.indexOf(u8, json_text, "\"pty_experiment_host_machine\": \"x86_64\"") != null);
@@ -546,7 +547,7 @@ test "writeRun embeds golden metadata_envelope digest for fixed upstream fingerp
 
     const json_path = try std.fmt.allocPrint(std.testing.allocator, "{s}/run.json", .{run_dir});
     defer std.testing.allocator.free(json_path);
-    const json_text = try std.fs.cwd().readFileAlloc(std.testing.allocator, json_path, 1 << 20);
+    const json_text = try compat_io.readFileAlloc(std.testing.allocator, json_path, 1 << 20);
     defer std.testing.allocator.free(json_text);
 
     try std.testing.expect(std.mem.indexOf(u8, json_text, "\"metadata_envelope_fingerprint_digest\": \"620d35500e035b198f5a81be6f0a99ba22eb2f86e483fa6abef0ab855f5c5754\"") != null);
@@ -595,7 +596,7 @@ test "writeRun escapes quotes in guarded PTY host snapshot strings" {
     try resultset_fingerprint.populate(&ctx, std.testing.allocator, &.{});
     try transport_fingerprint.populate(&ctx, std.testing.allocator, "rid-json-esc");
     try exec_summary_fingerprint.populate(&ctx, std.testing.allocator);
-    const term_e = std.posix.getenv("TERM") orelse "";
+    const term_e = compat_io.getenv("TERM");
     try context_summary_fingerprint.populate(&ctx, std.testing.allocator, term_e);
     try metadata_envelope_fingerprint.populate(&ctx, std.testing.allocator);
     try artifact_bundle_fingerprint.populate(&ctx, std.testing.allocator);
@@ -623,7 +624,7 @@ test "writeRun escapes quotes in guarded PTY host snapshot strings" {
 
     const json_path = try std.fmt.allocPrint(std.testing.allocator, "{s}/run.json", .{run_dir});
     defer std.testing.allocator.free(json_path);
-    const json_text = try std.fs.cwd().readFileAlloc(std.testing.allocator, json_path, 1 << 20);
+    const json_text = try compat_io.readFileAlloc(std.testing.allocator, json_path, 1 << 20);
     defer std.testing.allocator.free(json_text);
 
     try std.testing.expect(std.mem.indexOf(u8, json_text, "\"pty_experiment_host_machine\": \"ab\\\"c\"") != null);

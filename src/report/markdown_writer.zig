@@ -1,4 +1,5 @@
 const std = @import("std");
+const compat_io = @import("../compat_io.zig");
 const run_execute = @import("../runner/run_execute.zig");
 const RunContext = @import("../cli/run_context.zig").RunContext;
 const terminal_profile = @import("../runner/terminal_profile.zig");
@@ -20,7 +21,7 @@ pub fn writeRunSummary(
     const path = try std.fmt.allocPrint(allocator, "{s}/summary.md", .{run_dir});
     defer allocator.free(path);
 
-    const term = std.posix.getenv("TERM") orelse "";
+    const term = compat_io.getenv("TERM");
 
     var buf: std.ArrayList(u8) = .empty;
     defer buf.deinit(allocator);
@@ -88,5 +89,5 @@ pub fn writeRunSummary(
         }
     }
 
-    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = buf.items });
+    try compat_io.writeFile(.{ .sub_path = path, .data = buf.items });
 }

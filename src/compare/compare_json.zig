@@ -1,4 +1,5 @@
 const std = @import("std");
+const compat_io = @import("../compat_io.zig");
 const run_json = @import("run_json.zig");
 
 /// Writes `compare.json` with lexicographically ordered object keys at each level (`schema_version` 0.2 includes `metadata_deltas`).
@@ -69,7 +70,7 @@ pub fn writeFile(
     try appendJsonString(&buf, allocator, right_path);
     try buf.appendSlice(allocator, ",\n  \"schema_version\": \"0.2\"\n}\n");
 
-    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = buf.items });
+    try compat_io.writeFile(.{ .sub_path = path, .data = buf.items });
 }
 
 fn appendJsonOpt(buf: *std.ArrayList(u8), allocator: std.mem.Allocator, o: ?[]const u8) !void {
@@ -114,7 +115,7 @@ test "writeFile includes specset_fingerprint_digest in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"specset_fingerprint_digest\"") != null);
@@ -136,7 +137,7 @@ test "writeFile includes terminal_launch_outcome in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"terminal_launch_outcome\"") != null);
@@ -158,7 +159,7 @@ test "writeFile includes terminal_cmd_source in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"terminal_cmd_source\"") != null);
@@ -180,7 +181,7 @@ test "writeFile includes resolved_terminal_argv in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"resolved_terminal_argv\"") != null);
@@ -202,7 +203,7 @@ test "writeFile includes terminal_exec_template_id in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"terminal_exec_template_id\"") != null);
@@ -224,7 +225,7 @@ test "writeFile includes terminal_exec_template_version in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"terminal_exec_template_version\"") != null);
@@ -246,7 +247,7 @@ test "writeFile includes terminal_exec_resolved_path in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"terminal_exec_resolved_path\"") != null);
@@ -268,7 +269,7 @@ test "writeFile includes terminal_exec_resolved_path_normalization in metadata_d
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"terminal_exec_resolved_path_normalization\"") != null);
@@ -290,7 +291,7 @@ test "writeFile includes terminal_launch_preflight_ok in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"terminal_launch_preflight_ok\"") != null);
@@ -312,7 +313,7 @@ test "writeFile includes terminal_launch_preflight_reason in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"terminal_launch_preflight_reason\"") != null);
@@ -334,7 +335,7 @@ test "writeFile includes resultset_fingerprint_digest in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"resultset_fingerprint_digest\"") != null);
@@ -356,7 +357,7 @@ test "writeFile includes transport_fingerprint_digest in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"transport_fingerprint_digest\"") != null);
@@ -378,7 +379,7 @@ test "writeFile includes exec_summary_fingerprint_digest in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"exec_summary_fingerprint_digest\"") != null);
@@ -400,7 +401,7 @@ test "writeFile includes context_summary_fingerprint_digest in metadata_deltas" 
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"context_summary_fingerprint_digest\"") != null);
@@ -422,7 +423,7 @@ test "writeFile includes metadata_envelope_fingerprint_digest in metadata_deltas
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"metadata_envelope_fingerprint_digest\"") != null);
@@ -444,7 +445,7 @@ test "writeFile includes artifact_bundle_fingerprint_digest in metadata_deltas" 
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"artifact_bundle_fingerprint_digest\"") != null);
@@ -466,7 +467,7 @@ test "writeFile includes report_envelope_fingerprint_digest in metadata_deltas" 
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"report_envelope_fingerprint_digest\"") != null);
@@ -488,7 +489,7 @@ test "writeFile includes compare_envelope_fingerprint_digest in metadata_deltas"
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"compare_envelope_fingerprint_digest\"") != null);
@@ -510,7 +511,7 @@ test "writeFile includes run_envelope_fingerprint_digest in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"run_envelope_fingerprint_digest\"") != null);
@@ -532,7 +533,7 @@ test "writeFile includes session_envelope_fingerprint_digest in metadata_deltas"
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"session_envelope_fingerprint_digest\"") != null);
@@ -554,7 +555,7 @@ test "writeFile includes environment_envelope_fingerprint_digest in metadata_del
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"environment_envelope_fingerprint_digest\"") != null);
@@ -576,7 +577,7 @@ test "writeFile includes provenance_envelope_fingerprint_digest in metadata_delt
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"provenance_envelope_fingerprint_digest\"") != null);
@@ -598,7 +599,7 @@ test "writeFile includes integrity_envelope_fingerprint_digest in metadata_delta
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"integrity_envelope_fingerprint_digest\"") != null);
@@ -620,7 +621,7 @@ test "writeFile includes consistency_envelope_fingerprint_digest in metadata_del
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"consistency_envelope_fingerprint_digest\"") != null);
@@ -642,7 +643,7 @@ test "writeFile includes trace_envelope_fingerprint_digest in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"trace_envelope_fingerprint_digest\"") != null);
@@ -664,7 +665,7 @@ test "writeFile includes lineage_envelope_fingerprint_digest in metadata_deltas"
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"lineage_envelope_fingerprint_digest\"") != null);
@@ -686,7 +687,7 @@ test "writeFile includes state_envelope_fingerprint_digest in metadata_deltas" {
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"state_envelope_fingerprint_digest\"") != null);
@@ -708,7 +709,7 @@ test "writeFile includes artifact_manifest_fingerprint_digest in metadata_deltas
 
     try writeFile(std.testing.allocator, path, rows, "a/run.json", "b/run.json", &meta);
 
-    const text = try std.fs.cwd().readFileAlloc(std.testing.allocator, path, 1 << 20);
+    const text = try compat_io.readFileAlloc(std.testing.allocator, path, 1 << 20);
     defer std.testing.allocator.free(text);
 
     try std.testing.expect(std.mem.indexOf(u8, text, "\"field\": \"artifact_manifest_fingerprint_digest\"") != null);

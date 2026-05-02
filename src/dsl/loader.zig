@@ -16,8 +16,9 @@ const max_spec_bytes = 4 * 1024 * 1024;
 
 /// Reads a UTF-8 spec file into memory. Caller must `RawSpec.deinit`.
 pub fn loadFile(allocator: std.mem.Allocator, path: []const u8) !RawSpec {
-    const cwd = std.fs.cwd();
-    const data = cwd.readFileAlloc(allocator, path, max_spec_bytes) catch |err| switch (err) {
+    var io_ctx = std.Io.Threaded.init_single_threaded;
+    const io = io_ctx.io();
+    const data = std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(max_spec_bytes)) catch |err| switch (err) {
         error.FileTooBig => return error.OutOfMemory,
         else => |e| return e,
     };

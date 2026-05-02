@@ -40,7 +40,7 @@ pub fn validateRunReport(root: std.json.Value) ?[]const u8 {
         .array => |arr| {
             for (arr.items) |el| {
                 switch (el) {
-                    .string => |_| {},
+                    .string => {},
                     else => return "resolved_terminal_argv must be an array of strings",
                 }
             }

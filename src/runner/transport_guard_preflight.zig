@@ -8,7 +8,8 @@ pub fn envValueAllowsGuarded(value: ?[]const u8) bool {
 }
 
 pub fn envAllowsGuarded() bool {
-    return envValueAllowsGuarded(std.posix.getenv("ANA_TERM_ALLOW_GUARDED_TRANSPORT"));
+    const v = std.c.getenv("ANA_TERM_ALLOW_GUARDED_TRANSPORT") orelse return false;
+    return envValueAllowsGuarded(std.mem.span(v));
 }
 
 pub fn optInAllowsGuarded(allow_flag: bool) bool {

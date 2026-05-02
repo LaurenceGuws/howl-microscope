@@ -5,6 +5,8 @@ const run_json_validate = @import("../report/run_json_validate.zig");
 const max_read = 4 * 1024 * 1024;
 
 pub fn execute(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
+    var io_ctx = std.Io.Threaded.init_single_threaded;
+    const io = io_ctx.io();
     if (argv.len == 0) {
         printErr("usage: howl-microscope report <run.json|run-directory>\n") catch {};
         return errors.Category.unknown_command.exitCode();
@@ -20,7 +22,7 @@ pub fn execute(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
         break :blk p;
     };
 
-    const data = std.fs.cwd().readFileAlloc(allocator, json_path, max_read) catch {
+    const data = std.Io.Dir.cwd().readFileAlloc(io, json_path, allocator, .limited(max_read)) catch {
         printErr("could not read run.json\n") catch {};
         return errors.Category.runtime_failure.exitCode();
     };
@@ -58,15 +60,9 @@ pub fn execute(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
 }
 
 fn printErr(msg: []const u8) !void {
-    var buf: [256]u8 = undefined;
-    var w = std.fs.File.stderr().writer(&buf);
-    try w.interface.print("{s}", .{msg});
-    try w.interface.flush();
+    std.debug.print("{s}", .{msg});
 }
 
 fn printStdout(comptime fmt: []const u8, args: anytype) !void {
-    var buf: [4096]u8 = undefined;
-    var w = std.fs.File.stdout().writer(&buf);
-    try w.interface.print(fmt, args);
-    try w.interface.flush();
+    std.debug.print(fmt, args);
 }

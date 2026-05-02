@@ -51,7 +51,7 @@ fn hasTopLevelKey(text: []const u8, key: []const u8) bool {
 fn keyAssignment(line: []const u8, key: []const u8) bool {
     if (!std.mem.startsWith(u8, line, key)) return false;
     const rest = line[key.len..];
-    const t = std.mem.trimLeft(u8, rest, " \t");
+    const t = std.mem.trimStart(u8, rest, " \t");
     return t.len != 0 and t[0] == '=';
 }
 
@@ -86,5 +86,5 @@ fn extractStringField(text: []const u8, key: []const u8) ?[]const u8 {
 }
 
 fn trimEnd(s: []const u8) []const u8 {
-    return std.mem.trimRight(u8, std.mem.trimLeft(u8, s, " \t\r"), " \t\r");
+    return std.mem.trimEnd(u8, std.mem.trimStart(u8, s, " \t\r"), " \t\r");
 }

@@ -1,6 +1,10 @@
 const std = @import("std");
 const posix = std.posix;
-const c = std.c;
+const c = @cImport({
+    @cInclude("unistd.h");
+    @cInclude("signal.h");
+    @cInclude("sys/wait.h");
+});
 
 /// PH1-M31 process-level launch evidence (maps to `RunContext.terminal_launch_*`).
 pub const LaunchTelemetry = struct {
@@ -54,13 +58,52 @@ pub fn runBoundedArgvCommand(allocator: std.mem.Allocator, argv: []const []const
     const builtin = @import("builtin");
     if (builtin.target.os.tag != .linux) return .{};
     if (argv.len == 0) return .{};
+    var argv_z = std.ArrayList([:0]u8).empty;
+    defer {
+        for (argv_z.items) |z| allocator.free(z);
+        argv_z.deinit(allocator);
+    }
+    for (argv) |a| {
+        const z = allocator.dupeZ(u8, a) catch return .{
+            .attempt = 1,
+            .elapsed_ns = 0,
+            .exit_code = null,
+            .ok = false,
+            .err = err_spawn_failed,
+            .outcome = outcome_spawn_failed,
+            .diagnostics_reason = diagnostics_spawn_failed,
+            .diagnostics_elapsed_ms = 0,
+            .diagnostics_signal = null,
+        };
+        argv_z.append(allocator, z) catch return .{
+            .attempt = 1,
+            .elapsed_ns = 0,
+            .exit_code = null,
+            .ok = false,
+            .err = err_spawn_failed,
+            .outcome = outcome_spawn_failed,
+            .diagnostics_reason = diagnostics_spawn_failed,
+            .diagnostics_elapsed_ms = 0,
+            .diagnostics_signal = null,
+        };
+    }
+    var exec_argv = allocator.alloc(?[*:0]const u8, argv_z.items.len + 1) catch return .{
+        .attempt = 1,
+        .elapsed_ns = 0,
+        .exit_code = null,
+        .ok = false,
+        .err = err_spawn_failed,
+        .outcome = outcome_spawn_failed,
+        .diagnostics_reason = diagnostics_spawn_failed,
+        .diagnostics_elapsed_ms = 0,
+        .diagnostics_signal = null,
+    };
+    defer allocator.free(exec_argv);
+    for (argv_z.items, 0..) |z, i| exec_argv[i] = z.ptr;
+    exec_argv[argv_z.items.len] = null;
 
-    var child = std.process.Child.init(argv, allocator);
-    child.stdin_behavior = .Ignore;
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
-
-    child.spawn() catch {
+    const pid = c.fork();
+    if (pid < 0) {
         return .{
             .attempt = 1,
             .elapsed_ns = 0,
@@ -72,68 +115,22 @@ pub fn runBoundedArgvCommand(allocator: std.mem.Allocator, argv: []const []const
             .diagnostics_elapsed_ms = 0,
             .diagnostics_signal = null,
         };
-    };
+    }
+    if (pid == 0) {
+        _ = c.execvp(exec_argv[0].?, @ptrCast(exec_argv.ptr));
+        c._exit(127);
+    }
 
-    child.waitForSpawn() catch {
-        return .{
-            .attempt = 1,
-            .elapsed_ns = 0,
-            .exit_code = null,
-            .ok = false,
-            .err = err_spawn_failed,
-            .outcome = outcome_spawn_failed,
-            .diagnostics_reason = diagnostics_spawn_failed,
-            .diagnostics_elapsed_ms = 0,
-            .diagnostics_signal = null,
-        };
-    };
-
-    const pid = child.id;
-    const t_start = std.time.Instant.now() catch {
-        posix.kill(pid, posix.SIG.KILL) catch {};
-        var st_kill: c_int = undefined;
-        _ = c.waitpid(pid, &st_kill, 0);
-        return .{
-            .attempt = 1,
-            .elapsed_ns = 0,
-            .exit_code = null,
-            .ok = false,
-            .err = err_spawn_failed,
-            .outcome = outcome_spawn_failed,
-            .diagnostics_reason = diagnostics_spawn_failed,
-            .diagnostics_elapsed_ms = 0,
-            .diagnostics_signal = null,
-        };
-    };
-
-    const budget_ns = @as(u64, timeout_ms) * std.time.ns_per_ms;
-
+    var elapsed_ms: u64 = 0;
     while (true) {
         var status: c_int = undefined;
         const wr = c.waitpid(pid, &status, 1); // WNOHANG
         if (wr == 0) {
-            const now = std.time.Instant.now() catch {
-                posix.kill(pid, posix.SIG.KILL) catch {};
-                var st_clock: c_int = undefined;
-                _ = c.waitpid(pid, &st_clock, 0);
-                return .{
-                    .attempt = 1,
-                    .elapsed_ns = 0,
-                    .exit_code = null,
-                    .ok = false,
-                    .err = err_spawn_failed,
-                    .outcome = outcome_spawn_failed,
-                    .diagnostics_reason = diagnostics_spawn_failed,
-                    .diagnostics_elapsed_ms = 0,
-                    .diagnostics_signal = null,
-                };
-            };
-            const elapsed_raw = now.since(t_start);
-            if (elapsed_raw > budget_ns) {
-                posix.kill(pid, posix.SIG.KILL) catch {};
+            if (elapsed_ms > timeout_ms) {
+                _ = c.kill(pid, c.SIGKILL);
                 var st_to: c_int = undefined;
                 _ = c.waitpid(pid, &st_to, 0);
-                const el = clampJsonNs(now.since(t_start));
+                const el = clampJsonNs(elapsed_ms * std.time.ns_per_ms);
                 return .{
                     .attempt = 1,
                     .elapsed_ns = el,
@@ -146,71 +143,39 @@ pub fn runBoundedArgvCommand(allocator: std.mem.Allocator, argv: []const []const
                     .diagnostics_signal = null,
                 };
             }
-            std.Thread.sleep(1 * std.time.ns_per_ms);
+            _ = c.usleep(1000);
+            elapsed_ms += 1;
             continue;
         }
         if (wr == -1) {
-            switch (posix.errno(wr)) {
-                .INTR => continue,
-                else => {
-                    const now_e = std.time.Instant.now() catch {
-                        return .{
-                            .attempt = 1,
-                            .elapsed_ns = 0,
-                            .exit_code = null,
-                            .ok = false,
-                            .err = err_spawn_failed,
-                            .outcome = outcome_spawn_failed,
-                            .diagnostics_reason = diagnostics_spawn_failed,
-                            .diagnostics_elapsed_ms = 0,
-                            .diagnostics_signal = null,
-                        };
-                    };
-                    const el_e = clampJsonNs(now_e.since(t_start));
-                    return .{
-                        .attempt = 1,
-                        .elapsed_ns = el_e,
-                        .exit_code = null,
-                        .ok = false,
-                        .err = err_spawn_failed,
-                        .outcome = outcome_spawn_failed,
-                        .diagnostics_reason = diagnostics_spawn_failed,
-                        .diagnostics_elapsed_ms = elapsedNsToMs(el_e),
-                        .diagnostics_signal = null,
-                    };
-                },
-            }
-        }
-        if (wr != pid) {
-            const now_u = std.time.Instant.now() catch {
-                return .{
-                    .attempt = 1,
-                    .elapsed_ns = 0,
-                    .exit_code = null,
-                    .ok = false,
-                    .err = err_spawn_failed,
-                    .outcome = outcome_spawn_failed,
-                    .diagnostics_reason = diagnostics_spawn_failed,
-                    .diagnostics_elapsed_ms = 0,
-                    .diagnostics_signal = null,
-                };
-            };
-            const el_u = clampJsonNs(now_u.since(t_start));
+            if (posix.errno(wr) == .INTR) continue;
             return .{
                 .attempt = 1,
-                .elapsed_ns = el_u,
+                .elapsed_ns = 0,
                 .exit_code = null,
                 .ok = false,
                 .err = err_spawn_failed,
                 .outcome = outcome_spawn_failed,
                 .diagnostics_reason = diagnostics_spawn_failed,
-                .diagnostics_elapsed_ms = elapsedNsToMs(el_u),
+                .diagnostics_elapsed_ms = 0,
+                .diagnostics_signal = null,
+            };
+        }
+        if (wr != pid) {
+            return .{
+                .attempt = 1,
+                .elapsed_ns = 0,
+                .exit_code = null,
+                .ok = false,
+                .err = err_spawn_failed,
+                .outcome = outcome_spawn_failed,
+                .diagnostics_reason = diagnostics_spawn_failed,
+                .diagnostics_elapsed_ms = 0,
                 .diagnostics_signal = null,
             };
         }
 
-        const now_done = std.time.Instant.now() catch unreachable;
-        const elapsed_final = clampJsonNs(now_done.since(t_start));
+        const elapsed_final: u64 = clampJsonNs(elapsed_ms * std.time.ns_per_ms);
         const elapsed_final_ms = elapsedNsToMs(elapsed_final);
         const ustatus: u32 = @bitCast(status);
         if (posix.W.IFEXITED(ustatus)) {
@@ -251,7 +216,7 @@ pub fn runBoundedArgvCommand(allocator: std.mem.Allocator, argv: []const []const
                 .outcome = outcome_signaled,
                 .diagnostics_reason = diagnostics_signaled,
                 .diagnostics_elapsed_ms = elapsed_final_ms,
-                .diagnostics_signal = sig,
+                .diagnostics_signal = @intFromEnum(sig),
             };
         }
         return .{

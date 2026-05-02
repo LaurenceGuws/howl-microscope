@@ -44,5 +44,7 @@ pub fn writeFile(
         try buf.print(allocator, "| `{s}` | {s} | {s} | {s} |\n", .{ r.spec_id, delta, ls, rs });
     }
 
-    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = buf.items });
+    var io_ctx = std.Io.Threaded.init_single_threaded;
+    const io = io_ctx.io();
+    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = buf.items });
 }

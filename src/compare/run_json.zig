@@ -435,8 +435,8 @@ pub const Row = struct {
 };
 
 /// Parses `results` into a map; skips malformed rows (legacy / lenient).
-pub fn parseResultsMap(allocator: std.mem.Allocator, root: std.json.Value) !std.StringArrayHashMap(Row) {
-    var map = std.StringArrayHashMap(Row).init(allocator);
+pub fn parseResultsMap(allocator: std.mem.Allocator, root: std.json.Value) !std.StringHashMap(Row) {
+    var map = std.StringHashMap(Row).init(allocator);
     errdefer deinitMap(allocator, &map);
 
     const obj = switch (root) {
@@ -487,8 +487,8 @@ pub fn parseResultsMap(allocator: std.mem.Allocator, root: std.json.Value) !std.
 }
 
 /// Strict parse for `compare`: every result row must have string `spec_id` and `status`; duplicate `spec_id` values are rejected.
-pub fn parseResultsMapCompare(allocator: std.mem.Allocator, root: std.json.Value) !std.StringArrayHashMap(Row) {
-    var map = std.StringArrayHashMap(Row).init(allocator);
+pub fn parseResultsMapCompare(allocator: std.mem.Allocator, root: std.json.Value) !std.StringHashMap(Row) {
+    var map = std.StringHashMap(Row).init(allocator);
     errdefer deinitMap(allocator, &map);
 
     const obj = switch (root) {
@@ -541,7 +541,7 @@ pub fn parseResultsMapCompare(allocator: std.mem.Allocator, root: std.json.Value
     return map;
 }
 
-pub fn deinitMap(allocator: std.mem.Allocator, map: *std.StringArrayHashMap(Row)) void {
+pub fn deinitMap(allocator: std.mem.Allocator, map: *std.StringHashMap(Row)) void {
     var it = map.iterator();
     while (it.next()) |e| {
         allocator.free(e.key_ptr.*);
@@ -572,8 +572,8 @@ pub const DiffRow = struct {
     }
 };
 
-pub fn diffResults(allocator: std.mem.Allocator, left: *const std.StringArrayHashMap(Row), right: *const std.StringArrayHashMap(Row)) ![]DiffRow {
-    var seen = std.StringArrayHashMap(void).init(allocator);
+pub fn diffResults(allocator: std.mem.Allocator, left: *const std.StringHashMap(Row), right: *const std.StringHashMap(Row)) ![]DiffRow {
+    var seen = std.StringHashMap(void).init(allocator);
     defer seen.deinit();
 
     var union_ids: std.ArrayList([]const u8) = .empty;
@@ -1098,9 +1098,9 @@ test "parseResultsMapCompare rejects row missing status" {
 
 test "diffResults classifies added removed changed unchanged" {
     const a = std.testing.allocator;
-    var left = std.StringArrayHashMap(Row).init(a);
+    var left = std.StringHashMap(Row).init(a);
     defer deinitMap(a, &left);
-    var right = std.StringArrayHashMap(Row).init(a);
+    var right = std.StringHashMap(Row).init(a);
     defer deinitMap(a, &right);
 
     try left.put(try tdup(a, "gone"), .{ .status = try tdup(a, "x"), .notes = try tdup(a, "") });

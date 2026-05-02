@@ -171,8 +171,5 @@ pub fn execute(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
 }
 
 fn printErr(msg: []const u8) !void {
-    var buf: [512]u8 = undefined;
-    var w = std.fs.File.stderr().writer(&buf);
-    try w.interface.print("{s}", .{msg});
-    try w.interface.flush();
+    std.debug.print("{s}", .{msg});
 }

@@ -1,8 +1,11 @@
 //! PH1-M35: deterministic argv[0] availability before bounded terminal launch (see `docs/LAUNCH_PREFLIGHT_PLAN.md`).
 
 const std = @import("std");
-const posix = std.posix;
 const run_context_mod = @import("../cli/run_context.zig");
+const c = @cImport({
+    @cInclude("unistd.h");
+    @cInclude("stdlib.h");
+});
 
 /// Preflight not applicable (wrong OS, empty probe, or harness path that skips preflight).
 pub const reason_na = "na";
@@ -46,25 +49,24 @@ fn tryCanonicalizeResolvedPathLinux(p: *Probe, probe_path: []const u8) void {
     const builtin = @import("builtin");
     if (builtin.target.os.tag != .linux) return;
     var out_buf: [std.fs.max_path_bytes]u8 = undefined;
-    if (posix.realpath(probe_path, &out_buf)) |canon| {
-        copyResolvedPath(p, canon);
+    var in_buf: [std.fs.max_path_bytes:0]u8 = undefined;
+    if (probe_path.len + 1 > in_buf.len) return;
+    @memcpy(in_buf[0..probe_path.len], probe_path);
+    in_buf[probe_path.len] = 0;
+    if (c.realpath(&in_buf, &out_buf)) |canon| {
+        copyResolvedPath(p, std.mem.span(canon));
         p.path_normalization = path_normalization_canonical;
-    } else |_| {
+    } else {
         p.path_normalization = path_normalization_literal;
     }
 }
 
-fn finishFromOpenedFile(file: std.fs.File, path: []const u8) Probe {
-    defer file.close();
-    const st = file.stat() catch {
-        return .{ .ok = false, .reason = reason_missing_executable };
-    };
-    if (st.kind != .file) {
-        return .{ .ok = false, .reason = reason_not_executable };
-    }
-    posix.access(path, posix.X_OK) catch {
-        return .{ .ok = false, .reason = reason_not_executable };
-    };
+fn finishFromPath(path: []const u8) Probe {
+    var zbuf: [4096]u8 = undefined;
+    if (path.len + 1 > zbuf.len) return .{ .ok = false, .reason = reason_missing_executable };
+    @memcpy(zbuf[0..path.len], path);
+    zbuf[path.len] = 0;
+    if (c.access(@ptrCast(&zbuf), c.X_OK) != 0) return .{ .ok = false, .reason = reason_not_executable };
     var p = Probe{ .ok = true, .reason = reason_ok, .path_normalization = path_normalization_literal };
     copyResolvedPath(&p, path);
     tryCanonicalizeResolvedPathLinux(&p, path);
@@ -82,22 +84,19 @@ pub fn probeArgv0ExecutableLinux(argv0: []const u8) Probe {
     }
 
     if (std.mem.indexOfScalar(u8, argv0, '/')) |_| {
-        const file = std.fs.cwd().openFile(argv0, .{}) catch {
+        if (argv0.len == 0) {
             return .{ .ok = false, .reason = reason_missing_executable };
-        };
-        return finishFromOpenedFile(file, argv0);
+        }
+        return finishFromPath(argv0);
     }
 
-    const path_env = posix.getenv("PATH") orelse "";
+    const path_env = if (c.getenv("PATH")) |p| std.mem.span(p) else "";
     var it = std.mem.tokenizeScalar(u8, path_env, ':');
     var cand_buf: [4096]u8 = undefined;
     while (it.next()) |dir| {
         if (dir.len == 0) continue;
         const written = std.fmt.bufPrint(&cand_buf, "{s}/{s}", .{ dir, argv0 }) catch continue;
-        const file = std.fs.cwd().openFile(written, .{}) catch {
-            continue;
-        };
-        const r = finishFromOpenedFile(file, written);
+        const r = finishFromPath(written);
         if (r.ok) return r;
         if (std.mem.eql(u8, r.reason, reason_not_executable)) return r;
     }

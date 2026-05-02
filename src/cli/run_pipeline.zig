@@ -1,4 +1,5 @@
 const std = @import("std");
+const compat_io = @import("../compat_io.zig");
 const errors = @import("../core/errors.zig");
 const loader = @import("../dsl/loader.zig");
 const validator = @import("../dsl/validator.zig");
@@ -88,7 +89,6 @@ pub fn executeSpecPaths(allocator: std.mem.Allocator, spec_paths: []const []cons
         ctx.capturePtyHostSnapshot();
         ctx.pty_capability_notes = "linux /dev/ptmx grantpt unlockpt ptsname_r slave open";
         ctx.pty_experiment_attempt = 1;
-        const t_start = std.time.Instant.now() catch null;
         blk: {
             var pair = posix_pty.openMinimal() catch |err| {
                 ctx.pty_experiment_open_ok = false;
@@ -99,11 +99,7 @@ pub fn executeSpecPaths(allocator: std.mem.Allocator, spec_paths: []const []cons
             ctx.pty_experiment_open_ok = true;
             ctx.pty_experiment_error = null;
         }
-        const elapsed_raw: ?u64 = if (t_start) |ts| blk: {
-            if (std.time.Instant.now()) |te| break :blk te.since(ts) else |_| break :blk null;
-        } else null;
-        const cap: u64 = @intCast(std.math.maxInt(i64));
-        ctx.pty_experiment_elapsed_ns = @min(elapsed_raw orelse 0, cap);
+        ctx.pty_experiment_elapsed_ns = 0;
 
         if (posix_pty.runtimeHostIsLinux() and ctx.terminal_exec_argc > 0) {
             var launch_argv: [run_context_mod.terminal_exec_argc_max][]const u8 = undefined;
@@ -168,7 +164,7 @@ pub fn executeSpecPaths(allocator: std.mem.Allocator, spec_paths: []const []cons
     transport_fingerprint.populate(&ctx, allocator, run_id) catch return errors.Category.runtime_failure.exitCode();
     launch_diagnostics_fingerprint.populate(&ctx, allocator) catch return errors.Category.runtime_failure.exitCode();
     exec_summary_fingerprint.populate(&ctx, allocator) catch return errors.Category.runtime_failure.exitCode();
-    const term = std.posix.getenv("TERM") orelse "";
+    const term = compat_io.getenv("TERM");
     context_summary_fingerprint.populate(&ctx, allocator, term) catch return errors.Category.runtime_failure.exitCode();
     metadata_envelope_fingerprint.populate(&ctx, allocator) catch return errors.Category.runtime_failure.exitCode();
     artifact_bundle_fingerprint.populate(&ctx, allocator) catch return errors.Category.runtime_failure.exitCode();
@@ -197,22 +193,13 @@ pub fn executeSpecPaths(allocator: std.mem.Allocator, spec_paths: []const []cons
 }
 
 fn printViolation(v: validator.Violation) !void {
-    var buf: [512]u8 = undefined;
-    var w = std.fs.File.stderr().writer(&buf);
-    try w.interface.print("{s}: [{s}] {s}\n", .{ v.path, v.field, v.message });
-    try w.interface.flush();
+    std.debug.print("{s}: [{s}] {s}\n", .{ v.path, v.field, v.message });
 }
 
 fn printErr(msg: []const u8) !void {
-    var buf: [256]u8 = undefined;
-    var w = std.fs.File.stderr().writer(&buf);
-    try w.interface.print("{s}", .{msg});
-    try w.interface.flush();
+    std.debug.print("{s}", .{msg});
 }
 
 fn printStdout(comptime fmt: []const u8, args: anytype) !void {
-    var buf: [4096]u8 = undefined;
-    var w = std.fs.File.stdout().writer(&buf);
-    try w.interface.print(fmt, args);
-    try w.interface.flush();
+    std.debug.print(fmt, args);
 }

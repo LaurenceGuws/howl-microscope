@@ -6,7 +6,9 @@ pub fn loadBaselineLinux(allocator: std.mem.Allocator) ![][]const u8 {
 }
 
 pub fn loadManifestFile(allocator: std.mem.Allocator, path: []const u8) ![][]const u8 {
-    const text = std.fs.cwd().readFileAlloc(allocator, path, 1024 * 1024) catch |err| switch (err) {
+    var io_ctx = std.Io.Threaded.init_single_threaded;
+    const io = io_ctx.io();
+    const text = std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(1024 * 1024)) catch |err| switch (err) {
         error.FileTooBig => return error.OutOfMemory,
         else => |e| return e,
     };
@@ -34,7 +36,7 @@ pub fn loadManifestFile(allocator: std.mem.Allocator, path: []const u8) ![][]con
 }
 
 fn validateManifestPaths(allocator: std.mem.Allocator, paths: [][]const u8) !void {
-    var seen = std.StringArrayHashMap(void).init(allocator);
+    var seen = std.StringHashMap(void).init(allocator);
     defer seen.deinit();
 
     for (paths) |p| {
@@ -44,7 +46,9 @@ fn validateManifestPaths(allocator: std.mem.Allocator, paths: [][]const u8) !voi
     }
 
     for (paths) |p| {
-        std.fs.cwd().access(p, .{}) catch return error.MissingFile;
+        var io_ctx = std.Io.Threaded.init_single_threaded;
+        const io = io_ctx.io();
+        std.Io.Dir.cwd().access(io, p, .{}) catch return error.MissingFile;
     }
 }
 

@@ -25,22 +25,24 @@ pub fn discover(allocator: std.mem.Allocator, roots: []const []const u8) ![][]co
 }
 
 fn collectRoot(allocator: std.mem.Allocator, root: []const u8, out: *std.ArrayList([]const u8)) !void {
-    var dir = std.fs.cwd().openDir(root, .{ .iterate = true }) catch |err| switch (err) {
+    var io_ctx = std.Io.Threaded.init_single_threaded;
+    const io = io_ctx.io();
+    var dir = std.Io.Dir.cwd().openDir(io, root, .{ .iterate = true }) catch |err| switch (err) {
         error.NotDir => {
-            var f = try std.fs.cwd().openFile(root, .{});
-            defer f.close();
+            var f = try std.Io.Dir.cwd().openFile(io, root, .{});
+            defer f.close(io);
             if (!std.mem.endsWith(u8, root, ".toml")) return err;
             try out.append(allocator, try allocator.dupe(u8, root));
             return;
         },
         else => |e| return e,
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var walker = try dir.walk(allocator);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind != .file) continue;
         const base = std.mem.sliceTo(entry.basename, 0);
         if (!std.mem.endsWith(u8, base, ".toml")) continue;

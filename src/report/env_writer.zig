@@ -1,4 +1,5 @@
 const std = @import("std");
+const compat_io = @import("../compat_io.zig");
 const RunContext = @import("../cli/run_context.zig").RunContext;
 
 /// Writes `env.json` per `docs/ENV.md`.
@@ -6,7 +7,7 @@ pub fn writeEnvJson(allocator: std.mem.Allocator, run_dir: []const u8, ctx: RunC
     const path = try std.fmt.allocPrint(allocator, "{s}/env.json", .{run_dir});
     defer allocator.free(path);
 
-    const term = std.posix.getenv("TERM") orelse "";
+    const term = compat_io.getenv("TERM");
 
     var buf: std.ArrayList(u8) = .empty;
     defer buf.deinit(allocator);
@@ -36,5 +37,5 @@ pub fn writeEnvJson(allocator: std.mem.Allocator, run_dir: []const u8, ctx: RunC
 
     try buf.appendSlice(allocator, "\n}\n");
 
-    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = buf.items });
+    try compat_io.writeFile(.{ .sub_path = path, .data = buf.items });
 }
